@@ -24,7 +24,7 @@ if [ "$#" -eq 0 ]; then
 fi
 
 /etc/init.d/lucky stop >/dev/null 2>&1 || true
-apk add --allow-untrusted "$@"
+apk add --allow-untrusted --force-non-repository "$@"
 
 /etc/init.d/rpcd reload >/dev/null 2>&1 || true
 /etc/init.d/uhttpd reload >/dev/null 2>&1 || true

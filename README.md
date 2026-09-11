@@ -1,7 +1,7 @@
 # luci-app-lucky (APK Build)
 
-[![Build Lucky APK](https://github.com/FloatingDream528/luci-app-lucky/actions/workflows/build-apk.yml/badge.svg)](https://github.com/FloatingDream528/luci-app-lucky/actions/workflows/build-apk.yml)
-[![Latest Release](https://img.shields.io/github/v/release/FloatingDream528/luci-app-lucky?include_prereleases&color=success&label=Latest%20Release)](https://github.com/FloatingDream528/luci-app-lucky/releases)
+[![Build Lucky APK](https://github.com/666sxrA/luci-app-lucky/actions/workflows/build-apk.yml/badge.svg)](https://github.com/666sxrA/luci-app-lucky/actions/workflows/build-apk.yml)
+[![Latest Release](https://img.shields.io/github/v/release/666sxrA/luci-app-lucky?include_prereleases&color=success&label=Latest%20Release)](https://github.com/666sxrA/luci-app-lucky/releases)
 [![License](https://img.shields.io/badge/License-GPL%203.0-blue.svg)](https://opensource.org/licenses/GPL-3.0)
 
 这是 [Lucky](https://github.com/gdy666/lucky) 的 OpenWrt LuCI 控制面板以及 Lucky 预编译核心的打包源码库。专门针对采用全新 `apk` 包管理器的 OpenWrt 系统环境设计。
@@ -21,10 +21,24 @@
 | :--- | :--- |
 | `x86_64` | Intel/AMD 64位软路由 (X86) |
 | `aarch64_generic` | ARM 64位软路由/盒子 (如 R2s, 树莓派等 ARMv8 平台) |
+| `aarch64_cortex-a53` | ARM Cortex-A53 优化的 ARM64 固件；使用 OpenWrt 25.12.5 官方 SDK 固定构建 |
 | `arm_cortex-a7_neon-vfpv4` | ARMv7 设备 (如 竞斗云, 极路由X, IPQ40xx 系列等) |
 | `mips_24kc` | MIPS 大端设备 (如 较老的 Atheros AR 系列, AR9344 等) |
 | `mipsel_24kc` | MIPS 小端设备 (如 MTK MT7620, MT7621, 新路由3 等) |
 | `i386_pentium4` | 老款 32位 软路由 |
+
+### OpenWrt 25.12.5 / GL.iNet GL-MT3600BE
+
+本仓库提供适用于以下环境的独立 `aarch64_cortex-a53` 构建：
+
+- 设备：GL.iNet GL-MT3600BE
+- OpenWrt：25.12.5 (`r33051-f5dae5ece4`)
+- Target：`mediatek/filogic`
+- Package architecture：`aarch64_cortex-a53`
+- Kernel：6.12.94
+
+构建使用固定版本的 OpenWrt 25.12.5 SDK。请勿在该固件上安装
+`aarch64_generic` 构建；APK 会将两者视为不同的软件包架构。
 
 ---
 
@@ -35,15 +49,16 @@
 
 ### 正确的 SSH 安装步骤：
 
-1. 到 [Releases 页面](https://github.com/FloatingDream528/luci-app-lucky/releases) 下载符合你路由器架构的 `.zip` 压缩包。
+1. 到 [Releases 页面](https://github.com/666sxrA/luci-app-lucky/releases) 下载符合你路由器架构的 `.zip` 压缩包。
 2. 解压该 Zip，你会得到对应架构的数个 `.apk` 文件。
 3. 通过 WinSCP / MobaXterm 等工具，将解压出的所有 `.apk` 文件上传到路由器的 `/tmp/` 目录下。
 4. SSH 登录路由器终端，执行以下命令进行安装：
 
 ```sh
 cd /tmp
-# 必须带上 --allow-untrusted 参数跳过签名验证
-apk add --allow-untrusted ./*_lucky-*.apk ./*_luci-app-lucky-*.apk
+# 第三方本地 APK 需要跳过签名检查，并允许安装非仓库软件包
+apk add --allow-untrusted --force-non-repository \
+  ./lucky-*.apk ./luci-app-lucky-*.apk ./luci-i18n-lucky-zh-cn-*.apk
 
 # 重载网页服务器和后台接口缓存
 /etc/init.d/rpcd reload

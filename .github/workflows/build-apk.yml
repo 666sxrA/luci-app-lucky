@@ -99,12 +99,15 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        arch: [x86_64, aarch64_generic, arm_cortex-a7_neon-vfpv4, mips_24kc, mipsel_24kc, i386_pentium4]
+        arch: [x86_64, aarch64_generic, aarch64_cortex-a53, arm_cortex-a7_neon-vfpv4, mips_24kc, mipsel_24kc, i386_pentium4]
         include:
           - arch: x86_64
             core_arch: x86_64
           - arch: aarch64_generic
             core_arch: arm64
+          - arch: aarch64_cortex-a53
+            core_arch: arm64
+            sdk_arch: aarch64_cortex-a53-25.12.5
           - arch: arm_cortex-a7_neon-vfpv4
             core_arch: armv7
           - arch: mips_24kc
@@ -149,7 +152,7 @@ jobs:
       - name: Build packages
         uses: openwrt/gh-action-sdk@v8
         env:
-          ARCH: ${{ matrix.arch }}
+          ARCH: ${{ matrix.sdk_arch || matrix.arch }}
           FEEDNAME: lucky
           PACKAGES: lucky luci-app-lucky
 
@@ -231,7 +234,7 @@ jobs:
             echo "请从 SSH 安装，不要使用 LuCI 上传软件包入口："
             echo
             echo '```sh'
-            echo 'apk add --allow-untrusted ./lucky-*.apk ./luci-app-lucky-*.apk ./luci-i18n-lucky-zh-cn-*.apk'
+            echo 'apk add --allow-untrusted --force-non-repository ./lucky-*.apk ./luci-app-lucky-*.apk ./luci-i18n-lucky-zh-cn-*.apk'
             echo '/etc/init.d/rpcd reload'
             echo '/etc/init.d/uhttpd reload'
             echo '/etc/init.d/lucky restart'
