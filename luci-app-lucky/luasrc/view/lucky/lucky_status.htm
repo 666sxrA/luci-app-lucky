@@ -248,7 +248,10 @@
 	}
 
 	function controlService(action, skipConfirm) {
-		if (!skipConfirm && !confirm("<%:Are you sure to " + action + " lucky service?%>")) return;
+		var confirmText = action === "stop"
+			? "<%:are you sure stop lucky service?%>"
+			: "<%:are you sure start lucky service?%>";
+		if (!skipConfirm && !confirm(confirmText)) return;
 		
 		XHR.get('<%=url([[admin]], [[services]], [[lucky_service]])%>', { action: action }, function () {
 			if (action === "restart") {
