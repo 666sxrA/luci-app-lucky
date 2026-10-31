@@ -25,15 +25,17 @@ fetch() {
 	curl --connect-timeout 10 --retry 3 --retry-delay 2 -fsSL "$1"
 }
 
-root_html="$(fetch "${RELEASE_ROOT}/")"
-version_list="$(printf '%s\n' "$root_html" | grep -Eo 'v[0-9]+\.[0-9]+\.[0-9]+(beta[0-9]*)?' | sort -u || true)"
+latest_tag="${LUCKY_TAG:-}"
+if [ -z "$latest_tag" ]; then
+	root_html="$(fetch "${RELEASE_ROOT}/")"
+	version_list="$(printf '%s\n' "$root_html" | grep -Eo 'v[0-9]+\.[0-9]+\.[0-9]+(beta[0-9]*)?' | sort -u || true)"
 
-if [ -z "$version_list" ]; then
-	echo "未从 ${RELEASE_ROOT}/ 解析到 Lucky 版本目录。"
-	exit 1
-fi
+	if [ -z "$version_list" ]; then
+		echo "未从 ${RELEASE_ROOT}/ 解析到 Lucky 版本目录。"
+		exit 1
+	fi
 
-latest_tag="$(printf '%s\n' "$version_list" | "$PYTHON_BIN" -c '
+	latest_tag="$(printf '%s\n' "$version_list" | "$PYTHON_BIN" -c '
 import re
 import sys
 
@@ -54,6 +56,12 @@ if not versions:
 
 print(max(versions)[1])
 ')"
+fi
+
+if [[ ! "$latest_tag" =~ ^v[0-9]+\.[0-9]+\.[0-9]+(beta[0-9]*)?$ ]]; then
+	echo "Invalid Lucky version: $latest_tag" >&2
+	exit 1
+fi
 
 tag_html="$(fetch "${RELEASE_ROOT}/${latest_tag}/")"
 release_subdir="$(

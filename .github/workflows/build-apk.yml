@@ -71,7 +71,7 @@ jobs:
           echo "Latest official version: $LATEST_TAG"
           
           # Fetch the latest release tag (including pre-releases) from our GitHub repository
-          CURRENT_TAG=$(gh api repos/${{ github.repository }}/releases --jq '.[0].tag_name' 2>/dev/null || echo "none")
+          CURRENT_TAG=$(gh api repos/${{ github.repository }}/releases --jq '[.[] | select(.draft == false)][0].tag_name' 2>/dev/null || echo "none")
           echo "Current GitHub release: $CURRENT_TAG"
           
           # Format the official tag to match our repository's tag format (lucky-x.x.x)
@@ -138,14 +138,18 @@ jobs:
         shell: bash
         env:
           LUCKY_CORE_ARCH: ${{ matrix.core_arch }}
+          LUCKY_TAG: ${{ needs.check-update.outputs.latest_version }}
         run: bash scripts/prepare-latest-lucky.sh
 
       - name: Export release metadata
         id: meta
         shell: bash
+        env:
+          EXPECTED_LUCKY_TAG: ${{ needs.check-update.outputs.latest_version }}
         run: |
           set -euo pipefail
           source .lucky-release.env
+          test "$LUCKY_TAG" = "$EXPECTED_LUCKY_TAG"
           {
             echo "version=${PKG_VERSION}"
             echo "tag=lucky-${PKG_VERSION}"
@@ -220,6 +224,10 @@ jobs:
             # Remove trailing slash
             arch_dir="${dir%/}"
             if [ -d "$arch_dir" ]; then
+              version="${{ needs.build.outputs.version }}"
+              test -s "$arch_dir/lucky-${version}.apk"
+              test -s "$arch_dir/luci-app-lucky-${version}.apk"
+              compgen -G "$arch_dir/luci-i18n-lucky-zh-cn-*.apk" >/dev/null
               echo "Zipping architecture: $arch_dir"
               zip -r "lucky-${{ needs.build.outputs.version }}-${arch_dir}.zip" "$arch_dir"
               # Optional: You can remove the original apk files if you only want to release the zip
@@ -268,12 +276,8 @@ jobs:
           fi
 
           if gh release view "$TAG_NAME" >/dev/null 2>&1; then
-            gh release edit "$TAG_NAME" --title "$RELEASE_NAME" --notes-file release-notes.md
-            while IFS= read -r asset; do
-              [ -n "$asset" ] || continue
-              gh release delete-asset "$TAG_NAME" "$asset" --yes
-            done < <(gh release view "$TAG_NAME" --json assets --jq '.assets[].name | select(endswith(".zip"))')
             gh release upload "$TAG_NAME" "${files[@]}" --clobber
+            gh release edit "$TAG_NAME" --title "$RELEASE_NAME" --notes-file release-notes.md --draft=false
           else
             prerelease_args=()
             if [[ "$TAG_NAME" == *beta* || "$TAG_NAME" == *alpha* || "$TAG_NAME" == *rc* ]]; then
