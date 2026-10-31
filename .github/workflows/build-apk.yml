@@ -27,7 +27,7 @@ concurrency:
 jobs:
   check-update:
     name: Check for Lucky Updates
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     outputs:
       should_build: ${{ steps.check.outputs.should_build }}
       latest_version: ${{ steps.check.outputs.latest_version }}
@@ -46,17 +46,17 @@ jobs:
           import sys, re
           try:
               html = sys.stdin.read()
-              tags = re.findall(r'v\d+\.\d+\.\d+(?:beta\d+)?', html)
+              tags = re.findall(r'v\d+\.\d+\.\d+(?:beta\d*)?', html)
               if not tags:
                   raise SystemExit('No tags found')
 
               versions = []
               for tag in set(tags):
-                  match = re.match(r'^v(\d+)\.(\d+)\.(\d+)(?:beta(\d+))?$', tag)
+                  match = re.match(r'^v(\d+)\.(\d+)\.(\d+)(?:beta(\d*))?$', tag)
                   if match:
                       major, minor, patch, beta = match.groups()
                       stable_rank = 1 if beta is None else 0
-                      beta_number = int(beta or 0)
+                      beta_number = int(beta or 0) if beta is not None else 0
                       versions.append(((int(major), int(minor), int(patch), stable_rank, beta_number), tag))
 
               if not versions:
@@ -94,7 +94,7 @@ jobs:
     name: Build ${{ matrix.arch }} APK
     needs: check-update
     if: needs.check-update.outputs.should_build == 'true'
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     timeout-minutes: 25
     strategy:
       fail-fast: false
@@ -102,19 +102,25 @@ jobs:
         arch: [x86_64, aarch64_generic, aarch64_cortex-a53, arm_cortex-a7_neon-vfpv4, mips_24kc, mipsel_24kc, i386_pentium4]
         include:
           - arch: x86_64
+            sdk_arch: x86_64-25.12.6
             core_arch: x86_64
           - arch: aarch64_generic
+            sdk_arch: aarch64_generic-25.12.6
             core_arch: arm64
           - arch: aarch64_cortex-a53
             core_arch: arm64
             sdk_arch: aarch64_cortex-a53-25.12.5
           - arch: arm_cortex-a7_neon-vfpv4
+            sdk_arch: arm_cortex-a7_neon-vfpv4-25.12.6
             core_arch: armv7
           - arch: mips_24kc
+            sdk_arch: mips_24kc-25.12.6
             core_arch: mips_softfloat
           - arch: mipsel_24kc
+            sdk_arch: mipsel_24kc-25.12.6
             core_arch: mipsle_softfloat
           - arch: i386_pentium4
+            sdk_arch: i386_pentium4-25.12.6
             core_arch: i386
     outputs:
       version: ${{ steps.meta.outputs.version }}
@@ -150,9 +156,9 @@ jobs:
           } >> "$GITHUB_OUTPUT"
 
       - name: Build packages
-        uses: openwrt/gh-action-sdk@v8
+        uses: openwrt/gh-action-sdk@v11
         env:
-          ARCH: ${{ matrix.sdk_arch || matrix.arch }}
+          ARCH: ${{ matrix.sdk_arch }}
           FEEDNAME: lucky
           PACKAGES: lucky luci-app-lucky
 
@@ -190,7 +196,7 @@ jobs:
 
   release:
     name: Publish Release
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     needs: build
     if: github.event_name != 'pull_request'
 
